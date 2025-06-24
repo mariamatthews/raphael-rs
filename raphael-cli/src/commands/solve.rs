@@ -134,6 +134,10 @@ pub enum ConsumableArg {
     HQ(u32),
 }
 
+fn default_thread_count() -> usize {
+    std::thread::available_parallelism().map_or(4, |n| n.get())
+}
+
 fn map_and_clamp_hq_ingredients(recipe: &raphael_data::Recipe, hq_ingredients: [u8; 6]) -> [u8; 6] {
     let ingredients: Vec<(raphael_data::Item, u32)> = recipe
         .ingredients
@@ -168,6 +172,11 @@ pub fn execute(args: &SolveArgs) {
     if let Some(threads) = args.threads {
         rayon::ThreadPoolBuilder::new()
             .num_threads(threads)
+            .build_global()
+            .unwrap();
+    } else {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(default_thread_count())
             .build_global()
             .unwrap();
     }

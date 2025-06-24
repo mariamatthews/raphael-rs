@@ -57,10 +57,8 @@ fn initialize(num_threads: Option<NonZeroUsize>) {
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn default_thread_count() -> NonZeroUsize {
-    std::thread::available_parallelism().map_or(NonZeroUsize::new(4).unwrap(), |detected| {
-        let num_threads = std::cmp::max(2, detected.get() / 2);
-        NonZeroUsize::new(num_threads).unwrap()
-    })
+    std::thread::available_parallelism()
+        .unwrap_or_else(|_| NonZeroUsize::new(4).unwrap())
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -68,7 +66,7 @@ pub fn default_thread_count() -> NonZeroUsize {
     let window = web_sys::window().unwrap();
     let detected = window.navigator().hardware_concurrency() as usize;
     // See https://github.com/KonaeAkira/raphael-rs/issues/169
-    NonZeroUsize::new((detected / 2).clamp(2, 8)).unwrap()
+    NonZeroUsize::new(detected.clamp(2, 8)).unwrap()
 }
 
 #[cfg(not(target_arch = "wasm32"))]

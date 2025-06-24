@@ -152,33 +152,36 @@ impl StepLbSolver {
             if let Ok(new_state) = use_action_combo(&self.settings, state.to_state(), action) {
                 let progress = new_state.progress;
                 let quality = new_state.quality;
-                if let Ok(new_step_budget) = NonZeroU8::try_from(new_step_budget)
-                    && new_state.durability > 0
-                {
-                    let new_state = ReducedState::from_state(new_state, new_step_budget);
-                    if let Some(pareto_front) = self.solved_states.get(&new_state) {
-                        pareto_front_builder.push_slice(pareto_front);
-                    } else if !new_state.effects.allow_quality_actions() {
-                        // States that disallow quality actions get filtered out early because they only need to reach max_progress, whereas normal states need to reach both max_progress and max_quality to be fitered out.
-                        // So if the new state does not allow quality actions and cannot be found in the already solved state, we assume that it has reached max_progress using a lower step budget.
-                        // IMPORTANT: A missing child state could also mean that there is something wrong with the precompute template generation, but the consistency fuzz check should hopefully catch this case.
+                match NonZeroU8::try_from(new_step_budget) {
+                    Ok(new_step_budget) if new_state.durability > 0 => {
+                        let new_state = ReducedState::from_state(new_state, new_step_budget);
+                        if let Some(pareto_front) = self.solved_states.get(&new_state) {
+                            pareto_front_builder.push_slice(pareto_front);
+                        } else if !new_state.effects.allow_quality_actions() {
+                            // States that disallow quality actions get filtered out early because they only need to reach max_progress, whereas normal states need to reach both max_progress and max_quality to be fitered out.
+                            // So if the new state does not allow quality actions and cannot be found in the already solved state, we assume that it has reached max_progress using a lower step budget.
+                            // IMPORTANT: A missing child state could also mean that there is something wrong with the precompute template generation, but the consistency fuzz check should hopefully catch this case.
+                            pareto_front_builder
+                                .push_slice(&[ParetoValue::new(self.settings.max_progress(), 0)]);
+                        } else {
+                            unreachable!("Parent: {state:?}\nChild: {new_state:?}\nAction: {action:?}");
+                        }
                         pareto_front_builder
-                            .push_slice(&[ParetoValue::new(self.settings.max_progress(), 0)]);
-                    } else {
-                        unreachable!("Parent: {state:?}\nChild: {new_state:?}\nAction: {action:?}");
+                            .peek_mut()
+                            .unwrap()
+                            .iter_mut()
+                            .for_each(|value| {
+                                value.first += progress;
+                                value.second += quality;
+                            });
+                        pareto_front_builder.merge();
                     }
-                    pareto_front_builder
-                        .peek_mut()
-                        .unwrap()
-                        .iter_mut()
-                        .for_each(|value| {
-                            value.first += progress;
-                            value.second += quality;
-                        });
-                    pareto_front_builder.merge();
-                } else if progress != 0 {
-                    pareto_front_builder.push_slice(&[ParetoValue::new(progress, quality)]);
-                    pareto_front_builder.merge();
+                    _ => {
+                        if progress != 0 {
+                            pareto_front_builder.push_slice(&[ParetoValue::new(progress, quality)]);
+                            pareto_front_builder.merge();
+                        }
+                    }
                 }
             }
         }
