@@ -236,13 +236,14 @@ impl SavedRotationsData {
         let find_and_map_rotation = |rotation: &Rotation| {
             if let (Some(saved_solver_version), Some(saved_solve_info)) =
                 (rotation.solver.split(' ').nth(1), &rotation.solve_info)
-                && saved_solver_version == format!("v{}", env!("CARGO_PKG_VERSION"))
-                && *saved_solve_info == solve_info
             {
-                Some(rotation.actions.clone())
-            } else {
-                None
+                if saved_solver_version == format!("v{}", env!("CARGO_PKG_VERSION"))
+                    && *saved_solve_info == solve_info
+                {
+                    return Some(rotation.actions.clone());
+                }
             }
+            None
         };
         let history_search_result = self.solve_history.iter().find_map(find_and_map_rotation);
         if history_search_result.is_some() {

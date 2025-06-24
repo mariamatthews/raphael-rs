@@ -25,10 +25,10 @@ pub fn generate_random_states(
         let state = generated_states[rng.random_range(0..generated_states.len())];
         for _ in 0..5 {
             let action = FULL_SEARCH_ACTIONS[rng.random_range(0..FULL_SEARCH_ACTIONS.len())];
-            if let Ok(new_state) = use_action_combo(&settings, state, action)
-                && !new_state.is_final(&settings.simulator_settings)
-            {
-                generated_states.push(new_state);
+            if let Ok(new_state) = use_action_combo(&settings, state, action) {
+                if !new_state.is_final(&settings.simulator_settings) {
+                    generated_states.push(new_state);
+                }
             }
         }
     }

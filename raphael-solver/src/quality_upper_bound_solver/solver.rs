@@ -237,21 +237,23 @@ impl QualityUbSolver {
             reduced_state.effects,
             reduced_state.compressed_unreliable_quality,
         );
-        if let Some(&required_cp) = self.maximal_templates.get(&template_data)
-            && reduced_state.cp >= required_cp
-        {
-            let reduced_state = ReducedState {
-                cp: required_cp,
-                ..reduced_state
-            };
-            #[cfg(test)]
-            assert!(self.solved_states.contains_key(&reduced_state));
-            if let Some(pareto_front) = self.solved_states.get(&reduced_state)
-                && let Some(value) = pareto_front.last()
-                && value.first >= required_progress
-                && value.second + state.quality >= self.settings.max_quality()
-            {
-                return Ok(self.settings.max_quality());
+        if let Some(&required_cp) = self.maximal_templates.get(&template_data) {
+            if reduced_state.cp >= required_cp {
+                let reduced_state = ReducedState {
+                    cp: required_cp,
+                    ..reduced_state
+                };
+                #[cfg(test)]
+                assert!(self.solved_states.contains_key(&reduced_state));
+                if let Some(pareto_front) = self.solved_states.get(&reduced_state) {
+                    if let Some(value) = pareto_front.last() {
+                        if value.first >= required_progress
+                            && value.second + state.quality >= self.settings.max_quality()
+                        {
+                            return Ok(self.settings.max_quality());
+                        }
+                    }
+                }
             }
         }
 

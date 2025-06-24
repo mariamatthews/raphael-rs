@@ -1102,18 +1102,21 @@ impl MacroSolverApp {
             );
         });
 
-        if self.saved_rotations_config.load_from_saved_rotations
-            && let Some(actions) = self.saved_rotations_data.find_solved_rotation(
+        if self.saved_rotations_config.load_from_saved_rotations {
+            if let Some(actions) = self.saved_rotations_data.find_solved_rotation(
                 &game_settings,
                 initial_quality,
                 &self.solver_config,
-            )
+            ) {
+                let mut solver_events = self.solver_events.lock().unwrap();
+                solver_events.push_back(SolverEvent::Actions(actions));
+                solver_events.push_back(SolverEvent::LoadedFromHistory());
+                solver_events.push_back(SolverEvent::Finished(None));
+                return;
+            }
+        }
+
         {
-            let mut solver_events = self.solver_events.lock().unwrap();
-            solver_events.push_back(SolverEvent::Actions(actions));
-            solver_events.push_back(SolverEvent::LoadedFromHistory());
-            solver_events.push_back(SolverEvent::Finished(None));
-        } else {
             let target_quality = self
                 .solver_config
                 .quality_target
